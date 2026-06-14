@@ -1,0 +1,38 @@
+# === 厂商资料目录（视频/PDF/Keil 工程/3D 模型，几个 GB，版权 + 大小双重不上传）===
+1 机器人底盘开发手册和教程/
+2 STM32机器人底盘源码和固件/
+3 STM32机器人开发教程/
+4 ROS功能包源码及教程资料/
+5 OpenCTR H60控制器资料/
+6 软件工具与驱动程序/
+7 3D模型文件/
+8 通用学习视频教程和资料/
+
+# === 厂商图片 / 大文件 ===
+*.PNG
+*.png
+*.pdf
+*.PDF
+*.zip
+*.ZIP
+*.mp4
+*.MP4
+*.exe
+*.hex
+*.STEP
+*.step
+
+# === 编译/IDE 临时 ===
+log/
+build/
+install/
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# === 但要保留：本仓库自己产出的 PNG（如果有）===
+# 用 ! 反向放行，未来加图时把路径加进来，例如：
+# !README-images/architecture.png

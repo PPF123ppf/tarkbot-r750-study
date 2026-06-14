@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四元数交互式可视化 - ROS坐标系</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',sans-serif; background:#1a1a2e; color:#eee; overflow:hidden; height:100vh; }
+  #app { display:flex; height:100vh; }
+  #scene-wrap { flex:1; position:relative; }
+  #overlay { position:absolute; top:16px; left:16px; background:rgba(0,0,0,0.75); padding:14px 20px; border-radius:10px; pointer-events:none; z-index:10; }
+  #overlay .t { font-size:18px; font-weight:700; color:#00d4ff; }
+  #overlay .s { font-size:12px; color:#aaa; }
+  #overlay .f { color:#ffd700; font-family:monospace; font-size:13px; margin-top:2px; }
+  #overlay .hint { font-size:11px; color:#ffd700; margin-top:2px; }
+  #panel { width:370px; background:rgba(26,26,46,0.97); padding:20px 22px; overflow-y:auto; border-left:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:10px; }
+  #panel h2 { font-size:17px; color:#00d4ff; margin-bottom:4px; }
+  #panel h3 { font-size:13px; color:#bbb; margin:8px 0 2px; display:flex; align-items:center; gap:6px; }
+  #q-display { background:rgba(0,0,0,0.4); border-radius:8px; padding:10px 14px; font-family:monospace; font-size:17px; text-align:center; }
+  #q-display .cw { color:#ffd700; } #q-display .cx { color:#ff6b6b; } #q-display .cy { color:#51cf66; } #q-display .cz { color:#5c7cfa; }
+  .sg { margin:2px 0; }
+  .sg label { display:flex; justify-content:space-between; font-size:13px; }
+  .sg .v { color:#7fffd4; font-family:monospace; }
+  input[type=range] { width:100%; height:4px; -webkit-appearance:none; background:#444; border-radius:2px; outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:15px; height:15px; border-radius:50%; cursor:pointer; }
+  .w-s::-webkit-slider-thumb { background:#ffd700; } .x-s::-webkit-slider-thumb { background:#ff6b6b; }
+  .y-s::-webkit-slider-thumb { background:#51cf66; } .z-s::-webkit-slider-thumb { background:#5c7cfa; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; }
+  .pb { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#eee; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:12px; transition:0.15s; }
+  .pb:hover { background:rgba(0,212,255,0.25); border-color:#00d4ff; }
+  #euler { background:rgba(0,0,0,0.25); border-radius:5px; padding:6px 10px; font-size:12px; text-align:center; color:#999; }
+  #euler span { color:#eee; }
+  .ft { font-size:11px; color:#666; text-align:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-top:auto; }
+  .badge { display:inline-block; background:rgba(0,212,255,0.15); border-radius:3px; padding:0 6px; font-size:11px; color:#00d4ff; }
+  #status { position:absolute; bottom:16px; left:16px; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:6px; font-size:12px; color:#7fffd4; z-index:10; pointer-events:none; }
+  #formula-card { position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; font-size:12px; line-height:1.7; z-index:10; pointer-events:none; backdrop-filter:blur(4px); min-width:160px; }
+  #formula-card .fc-title { font-size:11px; font-weight:700; color:#00d4ff; margin-bottom:4px; letter-spacing:1px; }
+  #formula-card .fc-row { font-family:'Courier New',monospace; font-size:12px; color:#eee; white-space:nowrap; }
+  .ros-note { font-size:11px; background:rgba(0,212,255,0.08); border-radius:4px; padding:4px 8px; text-align:center; color:#00d4ff; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene-wrap">
+    <div id="overlay">
+      <div class="t">🎯 四元数可视化 <span style="font-size:12px;color:#5c7cfa;">ROS坐标系 (Z↑)</span></div>
+      <div class="s">拖动滑块 → 立方体实时旋转</div>
+      <div class="f">q = w + xi + yj + zk</div>
+      <div class="hint">坐标系: X(红)→前  Y(绿)→左  Z(蓝)→上</div>
+    </div>
+    <div id="status">|q| = 1.000 ✓ 单位四元数</div>
+    <div id="formula-card">
+      <div class="fc-title">符号关系</div>
+      <div class="fc-row">θ <span style="color:#666;">— 旋转角</span></div>
+      <div class="fc-row">(u<sub>x</sub>,u<sub>y</sub>,u<sub>z</sub>) <span style="color:#666;">— 轴方向</span></div>
+      <div class="fc-row" style="border-top:1px solid rgba(255,255,255,0.08);padding-top:5px;margin-top:3px;"><span style="color:#ffd700">w</span> = cos(θ/2)</div>
+      <div class="fc-row"><span style="color:#ff6b6b">x</span> = u<sub>x</sub> · sin(θ/2)</div>
+      <div class="fc-row"><span style="color:#51cf66">y</span> = u<sub>y</sub> · sin(θ/2)</div>
+      <div class="fc-row"><span style="color:#5c7cfa">z</span> = u<sub>z</sub> · sin(θ/2)</div>
+      <div class="fc-row" style="border-top:1px solid rgba(255,255,255,0.1);padding-top:5px;margin-top:3px;font-size:13px;">
+        q = [<span style="color:#ffd700">w</span>,<span style="color:#ff6b6b">x</span>,<span style="color:#51cf66">y</span>,<span style="color:#5c7cfa">z</span>]
+      </div>
+    </div>
+  </div>
+  <div id="panel">
+    <h2>四元数参数</h2>
+    <div id="q-display">
+      q = [<span class="cw" id="dw">1.000</span>, <span class="cx" id="dx">0.000</span>, <span class="cy" id="dy">0.000</span>, <span class="cz" id="dz">0.000</span>]
+    </div>
+    <div id="euler">偏航(Yaw/Z): <span id="ey">0°</span> &nbsp;|&nbsp; 俯仰(Pitch/Y): <span id="ep">0°</span> &nbsp;|&nbsp; 横滚(Roll/X): <span id="er">0°</span></div>
+    <div class="ros-note">📍 ROS 标准: X前进 Y左 Z上 | Yaw绕Z · Pitch绕Y · Roll绕X</div>
+
+    <h3><span class="dot" style="background:#ffd700"></span>θ — 旋转角度 <span class="badge">w = cos(θ/2)</span></h3>
+    <div class="sg"><label>θ: <span id="aw" class="v">0°</span> → w = <span id="real-w" class="v">1.000</span></label><input type="range" id="sw" class="w-s" min="0" max="360" value="0" step="1"></div>
+
+    <h3><span class="dot" style="background:#ff6b6b"></span>x — 绕X轴(横滚Roll) <span class="badge">ux·sin(θ/2)</span></h3>
+    <div class="sg"><label><span class="v" style="color:#ff6b6b">ux</span>: <span id="rx" class="v">0.000</span></label><input type="range" id="sx" class="x-s" min="-1" max="1" value="0" step="0.01"></div>
+
+    <h3><span class="dot" style="background:#51cf66"></span>y — 绕Y轴(俯仰Pitch) <span class="badge">uy·sin(θ/2)</span></h3>
+    <div class="sg"><label><span class="v" style="color:#51cf66">uy</span>: <span id="ry" class="v">0.000</span></label><input type="range" id="sy" class="y-s" min="-1" max="1" value="0" step="0.01"></div>
+
+    <h3><span class="dot" style="background:#5c7cfa"></span>z — 绕Z轴(偏航Yaw) <span class="badge">uz·sin(θ/2)</span></h3>
+    <div class="sg"><label><span class="v" style="color:#5c7cfa">uz</span>: <span id="rz" class="v">0.000</span></label><input type="range" id="sz" class="z-s" min="-1" max="1" value="0" step="0.01"></div>
+
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin:4px 0">
+      <button class="pb" data-w="0" data-x="0" data-y="0" data-z="0">🔄 初始</button>
+      <button class="pb" data-w="90" data-x="0" data-y="0" data-z="1">↩️ 绕Z转90°(Yaw)</button>
+      <button class="pb" data-w="180" data-x="0" data-y="0" data-z="1">🔃 绕Z转180°</button>
+      <button class="pb" data-w="90" data-x="0" data-y="1" data-z="0">🙃 绕Y转90°(Pitch)</button>
+      <button class="pb" data-w="90" data-x="1" data-y="0" data-z="0">🤖 绕X转90°(Roll)</button>
+      <button class="pb" data-w="120" data-x="1" data-y="1" data-z="1">🌀 复合旋转</button>
+    </div>
+
+    <div class="ft">🖱️ 鼠标拖拽旋转视角 &nbsp;·&nbsp; 滚轮缩放<br>Z(蓝↑)=垂直轴 &nbsp; Y(绿←)=左 &nbsp; X(红→)=前</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+(function() {
+  const wrap = document.getElementById('scene-wrap');
+  const wrapW = wrap.clientWidth, wrapH = wrap.clientHeight;
+
+  // ========== 场景：Z向上（ROS标准）==========
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a2e);
+
+  const camera = new THREE.PerspectiveCamera(40, wrapW/wrapH, 0.1, 50);
+  camera.up.set(0, 0, 1);       // ← Z是向上的！
+  camera.position.set(4, -4, 3); // 右, 后, 上
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias:true });
+  renderer.setSize(wrapW, wrapH);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  wrap.insertBefore(renderer.domElement, wrap.firstChild);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 2;
+  controls.maxDistance = 12;
+  controls.target.set(0, 0, 0);
+  // OrbitControls 会自动读取 camera.up，所以 Z 就成为上方向
+
+  // --- 灯光 ---
+  scene.add(new THREE.AmbientLight(0x444466, 0.5));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+  dl.position.set(5, -5, 10);
+  scene.add(dl);
+  scene.add(new THREE.DirectionalLight(0x8888ff, 0.3).position.set(-5, 5, -3));
+
+  // --- 地面网格（X-Y 平面，因为 Z 向上）---
+  const grid = new THREE.GridHelper(6, 12, 0x4466aa, 0x334488);
+  grid.rotation.x = Math.PI / 2;  // 从 X-Z 平面转到 X-Y 平面
+  scene.add(grid);
+
+  // --- 坐标轴（ROS 标准） ---
+  function addAxis(len, color, label, dir) {
+    const pts = [new THREE.Vector3(0,0,0), dir.clone().multiplyScalar(len)];
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color, linewidth: 1 })));
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(0.06, 0.15, 8),
+      new THREE.MeshBasicMaterial({ color })
+    );
+    cone.position.copy(dir.clone().multiplyScalar(len));
+    cone.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir);
+    scene.add(cone);
+  }
+  addAxis(2.5, 0xff4444, 'X(前)', new THREE.Vector3(1,0,0));
+  addAxis(2.5, 0x51cf66, 'Y(左)', new THREE.Vector3(0,1,0));
+  addAxis(2.5, 0x5c7cfa, 'Z(上)', new THREE.Vector3(0,0,1));
+
+  // --- Sprite 轴标签 ---
+  function makeLabel(text, color, pos, scale) {
+    const c = document.createElement('canvas');
+    c.width = 80; c.height = 36;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.font = 'bold 26px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 40, 20);
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(c), transparent: true, depthTest: false
+    }));
+    spr.position.copy(pos);
+    spr.scale.set(scale || 0.7, scale ? scale*0.45 : 0.32, 1);
+    scene.add(spr);
+  }
+  makeLabel('X', '#ff4444', new THREE.Vector3(2.9, 0, 0));
+  makeLabel('Y', '#51cf66', new THREE.Vector3(0, 2.9, 0));
+  makeLabel('Z', '#5c7cfa', new THREE.Vector3(0, 0, 2.9));
+
+  // --- 旋转轴指示（金色箭头） ---
+  const axisArrow = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 2.0, 0xffd700, 0.35, 0.18
+  );
+  scene.add(axisArrow);
+
+  // 轴标签
+  const axLabelCanvas = document.createElement('canvas');
+  axLabelCanvas.width = 100; axLabelCanvas.height = 28;
+  const alc = axLabelCanvas.getContext('2d');
+  alc.fillStyle = '#ffd700';
+  alc.font = 'bold 14px Arial';
+  alc.textAlign = 'center';
+  alc.textBaseline = 'middle';
+  alc.fillText('← 旋转轴', 55, 14);
+  const axLabelSpr = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(axLabelCanvas), transparent: true, depthTest: false
+  }));
+  axLabelSpr.scale.set(0.9, 0.25, 1);
+  scene.add(axLabelSpr);
+
+  // --- 轨迹环（在旋转轴垂直平面上） ---
+  const ringPts = [];
+  for (let i = 0; i <= 64; i++) {
+    const a = (i/64) * Math.PI * 2;
+    ringPts.push(new THREE.Vector3(Math.cos(a)*1.7, Math.sin(a)*1.7, 0));
+  }
+  const ring = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(ringPts),
+    new THREE.LineBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.2 })
+  );
+  scene.add(ring);
+
+  // --- 弧段（实际旋转走过的路径） ---
+  const arc = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)]),
+    new THREE.LineBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.6 })
+  );
+  scene.add(arc);
+
+  // ========== 立方体 ==========
+  const cubeGroup = new THREE.Group();
+
+  // 半透明立方体
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 1.5, 1.5),
+    new THREE.MeshStandardMaterial({ color: 0x4488ff, roughness: 0.3, metalness: 0.2, transparent: true, opacity: 0.8 })
+  );
+  cubeGroup.add(box);
+
+  // 边线
+  cubeGroup.add(new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(1.5, 1.5, 1.5)),
+    new THREE.LineBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.35 })
+  ));
+
+  // 前端标记（红色锥 → 指向 X 正方向 = 前进方向）
+  const frontCone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.18, 0.35, 8),
+    new THREE.MeshStandardMaterial({ color: 0xff4444 })
+  );
+  frontCone.position.set(0.75, 0, 0);
+  frontCone.rotation.z = -Math.PI/2;
+  cubeGroup.add(frontCone);
+
+  const fBall = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff6666 })
+  );
+  fBall.position.set(0.85, 0, 0);
+  cubeGroup.add(fBall);
+
+  // 顶面标记（绿球 → 指向 Z 正方向 = 上方）
+  const tBall = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0x66ff66 })
+  );
+  tBall.position.set(0, 0, 0.85);
+  cubeGroup.add(tBall);
+
+  // 小字体"前"标签
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 40; labelCanvas.height = 24;
+  const lctx = labelCanvas.getContext('2d');
+  lctx.fillStyle = '#ff8888';
+  lctx.font = 'bold 14px Arial';
+  lctx.textAlign = 'center';
+  lctx.textBaseline = 'middle';
+  lctx.fillText('前', 20, 14);
+  const labelSpr = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(labelCanvas), transparent: true, depthTest: false
+  }));
+  labelSpr.position.set(1.05, 0, 0);
+  labelSpr.scale.set(0.35, 0.22, 1);
+  cubeGroup.add(labelSpr);
+
+  const upLabelCanvas = document.createElement('canvas');
+  upLabelCanvas.width = 40; upLabelCanvas.height = 24;
+  const ulctx = upLabelCanvas.getContext('2d');
+  ulctx.fillStyle = '#88ff88';
+  ulctx.font = 'bold 14px Arial';
+  ulctx.textAlign = 'center';
+  ulctx.textBaseline = 'middle';
+  ulctx.fillText('上', 20, 14);
+  const upLabelSpr = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(upLabelCanvas), transparent: true, depthTest: false
+  }));
+  upLabelSpr.position.set(0, 0, 1.05);
+  upLabelSpr.scale.set(0.35, 0.22, 1);
+  cubeGroup.add(upLabelSpr);
+
+  scene.add(cubeGroup);
+
+  // ========== DOM 引用 ==========
+  const sw = document.getElementById('sw');
+  const sx = document.getElementById('sx');
+  const sy = document.getElementById('sy');
+  const sz = document.getElementById('sz');
+  const dw = document.getElementById('dw');
+  const dx = document.getElementById('dx');
+  const dy = document.getElementById('dy');
+  const dz = document.getElementById('dz');
+  const aw = document.getElementById('aw');
+  const rw = document.getElementById('real-w');
+  const rx = document.getElementById('rx');
+  const ry = document.getElementById('ry');
+  const rz = document.getElementById('rz');
+  const ey = document.getElementById('ey');
+  const ep = document.getElementById('ep');
+  const er = document.getElementById('er');
+  const st = document.getElementById('status');
+
+  function update() {
+    const thetaDeg = parseFloat(sw.value) || 0;
+    const theta = thetaDeg * Math.PI / 180;
+    let ux = parseFloat(sx.value) || 0;
+    let uy = parseFloat(sy.value) || 0;
+    let uz = parseFloat(sz.value) || 0;
+
+    // 归一化旋转轴
+    let ulen = Math.sqrt(ux*ux + uy*uy + uz*uz);
+    if (ulen < 1e-10) { ux=0; uy=0; uz=1; ulen=1; }
+    const nx = ux/ulen, ny = uy/ulen, nz = uz/ulen;
+
+    const h = theta/2;
+    const qw = Math.cos(h);
+    const qx = nx * Math.sin(h);
+    const qy = ny * Math.sin(h);
+    const qz = nz * Math.sin(h);
+
+    // 归一化
+    let qlen = Math.sqrt(qw*qw + qx*qx + qy*qy + qz*qz);
+    if (qlen < 1e-10) qlen = 1;
+    const nw = qw/qlen, nx2 = qx/qlen, ny2 = qy/qlen, nz2 = qz/qlen;
+
+    // 更新显示
+    dw.textContent = nw.toFixed(3);
+    dx.textContent = nx2.toFixed(3);
+    dy.textContent = ny2.toFixed(3);
+    dz.textContent = nz2.toFixed(3);
+    aw.textContent = thetaDeg.toFixed(0) + '°';
+    rw.textContent = nw.toFixed(3);
+    rx.textContent = ux.toFixed(3);
+    ry.textContent = uy.toFixed(3);
+    rz.textContent = uz.toFixed(3);
+    st.textContent = '|q| = ' + qlen.toFixed(4) + (Math.abs(qlen-1) < 0.001 ? ' ✓ 单位四元数' : '');
+
+    // 更新旋转轴箭头
+    axisArrow.setDirection(new THREE.Vector3(nx, ny, nz));
+    axisArrow.setLength(2.0, 0.35, 0.18);
+    axLabelSpr.position.set(nx*2.5, ny*2.5, nz*2.5);
+
+    // 更新轨迹环方向
+    ring.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0), new THREE.Vector3(nx, ny, nz));
+
+    // 更新弧段
+    const nSeg = Math.max(3, Math.floor(theta / (Math.PI*2) * 64));
+    const pts = [];
+    for (let i = 0; i <= nSeg; i++) {
+      const a = (i/nSeg) * theta;
+      pts.push(new THREE.Vector3(Math.cos(a)*1.7, Math.sin(a)*1.7, 0));
+    }
+    arc.geometry.dispose();
+    arc.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+
+    // 应用旋转（ROS 轴序：X Y Z = Roll Pitch Yaw）
+    const q = new THREE.Quaternion(nx2, ny2, nz2, nw);
+    cubeGroup.quaternion.copy(q);
+
+    // 转欧拉角（ROS 标准 ZYX 轴序：Yaw→Pitch→Roll）
+    const euler = new THREE.Euler().setFromQuaternion(q, 'ZYX');
+    ey.textContent = (euler.z * 180/Math.PI).toFixed(1) + '°';  // Yaw
+    ep.textContent = (euler.y * 180/Math.PI).toFixed(1) + '°';  // Pitch
+    er.textContent = (euler.x * 180/Math.PI).toFixed(1) + '°';  // Roll
+  }
+
+  sw.addEventListener('input', update);
+  sx.addEventListener('input', update);
+  sy.addEventListener('input', update);
+  sz.addEventListener('input', update);
+
+  document.querySelectorAll('.pb').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sw.value = btn.dataset.w;
+      sx.value = btn.dataset.x;
+      sy.value = btn.dataset.y;
+      sz.value = btn.dataset.z;
+      update();
+    });
+  });
+
+  window.addEventListener('resize', () => {
+    const w2 = wrap.clientWidth, h2 = wrap.clientHeight;
+    camera.aspect = w2/h2;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w2, h2);
+  });
+
+  update();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>

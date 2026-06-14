@@ -1,0 +1,517 @@
+# 3 个月学习计划（ROS2 Jazzy 版）— 抢入机器人/嵌入式实习
+
+> 身份：在校学生（本/硕）
+> 环境：Ubuntu 24.04 + ROS2 Jazzy + Gazebo Harmonic
+> 目标：3 个月后能投递机器人或嵌入式实习，简历有 1 个有亮点的开源项目（ROS2 + Nav2），面试能讲清 5~6 个技术点
+> 硬件：1~2 周内到货，前期纯仿真 + 修包，硬件到了切真车
+> 起点：已有 4 份技术笔记（FreeRTOS / IMU / ROS / 运动学）+ 厂商 ROS2 驱动包已修复
+> 节奏：周 15~25 h，工作日各 1.5~2 h + 周末半天集中
+
+## 核心原则（先看再开干）
+
+1. **每周一个可验证的小成果** — 周日 GitHub 上有新提交，README 有更新
+2. **学完立刻输出** — 写到笔记里 / 录 1 分钟视频 / 发朋友圈技术博客都行
+3. **不许"看完视频不动手"** — 任何理论必须配代码或实验
+4. **简历每两周更新一次** — 不是最后才整理，是边做边写
+5. **被卡住超过 4 小时立刻问** — Stack Overflow / GitHub Issue / 群友 / 我，不卡死磕
+
+## ROS1→ROS2 命令替换映射表（贯穿全计划）
+
+| ROS1 | ROS2 Jazzy |
+|---|---|
+| `roscore` | （不需要，DDS 自发现） |
+| `roslaunch pkg file.launch arg:=val` | `ros2 launch pkg file.launch.py arg:=val` |
+| `rostopic echo /topic` | `ros2 topic echo /topic` |
+| `rosrun pkg node` | `ros2 run pkg node` |
+| `rosbag record/play` | `ros2 bag record/play`（mcap 格式） |
+| `rqt_plot` | `ros2 run rqt_plot rqt_plot` 或 `plotjuggler` |
+| `gmapping` | `slam_toolbox`（W7 主） |
+| `cartographer` | `cartographer_ros`（W8 对比） |
+| `amcl`（独立包） | `nav2_amcl` |
+| `move_base` | **Nav2** (`nav2_bringup`) |
+| `robot_pose_ekf` | `robot_localization`（`ekf_node`） |
+| `dynamic_reconfigure` | ROS2 参数 + `ros2 param set` |
+| `tf` (旧) | `tf2_ros`（`ros2 run tf2_tools view_frames`） |
+| `catkin_make` | `colcon build` |
+
+## 阶段总览
+
+```
+第 1~4 周：仿真起步 + 把现有项目吃透       ← 还没到货
+第 5~8 周：真车上手 + SLAM 实战            ← 硬件到货
+第 9~12 周：导航闭环 + 简历打磨 + 投实习   ← 冲刺
+```
+
+每个阶段一个交付物：
+- 第 4 周末：Python 仿真 + Gazebo Harmonic + 4 份技术笔记发 GitHub
+- 第 8 周末：真车跑通 SLAM 建图（slam_toolbox + cartographer 对比），录视频
+- 第 12 周末：自主导航 demo（Nav2）+ 加分项 YOLO + 简历投出 ≥ 20 家
+
+---
+
+# 阶段 1：仿真起步 + 吃透现有项目（第 1~4 周）
+
+**主线**：在没有真车的窗口期，把项目背的所有理论吃透，工具链铺好，仿真先跑通。
+
+## 第 1 周：环境搭建 + 项目吃透
+
+### 任务
+
+| 编号 | 任务                                           | 时间 | 验证标准                         |
+| ---- | ---------------------------------------------- | ---- | -------------------------------- |
+| W1.1 | Ubuntu 24.04 + ROS2 Jazzy 确认环境（已装则验证） | 1 h  | `ros2 doctor --report` 无 ERROR；`echo $ROS_DISTRO` 输出 jazzy |
+| W1.2 | 修复并编译 `tarkbot_robot` ROS2 包（见 Phase 1 修包计划） | 4 h  | `colcon build` 退出码 0；`ros2 launch tarkbot_robot robot.launch.py --print` 不报错 |
+| W1.3 | 把 4 份现有技术笔记从头读一遍（不许跳）        | 4 h  | 能闭眼讲出 6 种车型 + Mahony 算法核心步骤 |
+| W1.4 | 注册 GitHub，新建仓库 `tarkbot-r750-study`     | 0.5 h | 仓库存在，4 份笔记已 push         |
+| W1.5 | 用 Mermaid 画一张项目架构总图                  | 2 h  | README 顶部能看到这张图          |
+| W1.6 | 写一份"项目阅读笔记 V1"，复述 STM32→ROS 全链路   | 4 h  | 不少于 1500 字，发布在仓库        |
+
+### 周日交付
+
+- ✅ 一个空白 ROS 节点能编译能跑
+- ✅ GitHub 仓库立起来，README 有架构图
+
+### 容易卡的点
+
+- ROS 国内源镜像（清华源 / 中科大源），`apt install ros-noetic-desktop-full` 卡住直接换源
+- WSL2 跑 ROS2 没问题，但跑 Gazebo / RViz2 需要装 X server（VcXsrv 或 WSLg）
+
+## 第 2 周：Python 数学仿真（档位 1）
+
+### 任务
+
+| 编号 | 任务                                              | 时间 | 验证标准                       |
+| ---- | ------------------------------------------------- | ---- | ------------------------------ |
+| W2.1 | 写 `mecanum_kinematics.py`：cmd_vel→4 轮转速      | 3 h  | 给 (0.5, 0, 0) 输出对的轮速     |
+| W2.2 | 写 `simulate_traj.py`：积分得到位姿，画轨迹       | 2 h  | 圆周/麦轮横移轨迹和理论一致     |
+| W2.3 | 复现其他 3 种车型（FWD / TWD / AKM）              | 4 h  | 4 份脚本，每份带轨迹图          |
+| W2.4 | 写 `pid_sim.py`：模拟一阶电机 + PID 闭环        | 3 h  | 能画出阶跃响应曲线，调出无超调 |
+| W2.5 | 给每个 .py 加一段 docstring + 在 README 嵌入轨迹图 | 2 h  | 仓库 `simulation/` 目录漂亮     |
+| W2.5b | 写 `min_vel_listener.py`：用 rclpy 订阅 /cmd_vel 打印速度 | 2 h  | `ros2 run` 能跑，发 cmd_vel 能看到打印 |
+| W2.6 | 写《技术笔记-6种车型运动学.md》                    | 5 h  | 把 ax_kinematics.c 6 个分支讲透 |
+
+### 周日交付
+
+- ✅ `simulation/` 目录里 5 个 Python 脚本可独立运行
+- ✅ 4 张轨迹对比图（直行 / 横移 / 自转 / 圆弧）
+- ✅ 第 5 份技术笔记提交
+
+## 第 3 周：URDF + RViz2 可视化（档位 2）
+
+### 任务
+
+| 编号 | 任务                                            | 时间 | 验证标准                   |
+| ---- | ----------------------------------------------- | ---- | -------------------------- |
+| W3.1 | 手写简化 URDF：盒子车体 + 4 圆柱轮 + 雷达圆柱   | 4 h  | RViz2 能看到完整车型        |
+| W3.2 | 写 Python launch (`robot.launch.py`) 加载 robot_state_publisher | 2 h  | `ros2 run tf2_tools view_frames` TF 树完整 |
+| W3.3 | 写 `fake_robot.py`（rclpy）：订阅 cmd_vel 发布 odom + TF | 4 h  | 键盘遥控 RViz2 假车能动      |
+| W3.4 | 用 fusion2urdf / SolidWorks 转 STEP→URDF（MEC） | 4 h  | RViz2 能看到真车外观（可选）|
+| W3.5 | 写《技术笔记-URDF与TF树.md》                     | 3 h  | 内容覆盖 URDF 写法 + TF 调试|
+| W3.6 | 录 30 秒 GIF：键盘按一下 RViz2 假车在跑          | 0.5 h| 嵌入到 README              |
+
+### 周日交付
+
+- ✅ `urdf/tarkbot.urdf` + 一份 launch
+- ✅ 一段 GIF/视频展示 RViz2 联动
+- ✅ 第 6 份技术笔记
+
+## 第 4 周：Gazebo 仿真起步（档位 3 上半）+ 算法补课
+
+### 任务
+
+| 编号 | 任务                                               | 时间 | 验证标准                          |
+| ---- | -------------------------------------------------- | ---- | --------------------------------- |
+| W4.1 | 装 Gazebo Harmonic + ros_gz_bridge + ros2_control | 2 h  | `gz sim` 命令能跑；`ros2 pkg list \| grep ros_gz` 有内容 |
+| W4.2 | fork `mecanum_drive_demo`（ROS2 jazzy 版），改尺寸为 R750 | 4 h  | gz sim 里有 R750 形状的车 |
+| W4.3 | 用 `mecanum_drive_controller`（ros2_control）+ `ros_gz_bridge` 桥接 cmd_vel | 3 h  | 键盘遥控车在 Gazebo 里跑 |
+| W4.4 | 加 ray sensor → ros_gz_bridge → /scan | 3 h  | RViz2 能看到 /scan 点云 |
+| W4.5 | 加 imu sensor → ros_gz_bridge → /imu | 2 h  | /imu 话题有数据 |
+| W4.6 | 学 PID 调参（位置式 vs 增量式 + 抗积分饱和）       | 4 h  | 写《技术笔记-PID控制器.md》        |
+| W4.7 | 简历 v1：把已有项目写进去                          | 2 h  | 发我或学长 review                  |
+
+### 周日交付
+
+- ✅ Gazebo 里能键盘遥控小车 + 看到雷达点云
+- ✅ 第 7 份技术笔记（PID）
+- ✅ 简历 v1 完成
+- 🎯 **阶段 1 总结**：录一段 2 分钟视频展示 Python 仿真 + RViz2 + Gazebo Harmonic，发 B 站
+
+
+---
+
+# 阶段 2：真车上手 + SLAM 实战（第 5~8 周）
+
+**主线**：硬件到货后立刻接入真车，把仿真验证过的所有东西在真车上重新跑一遍，做出 SLAM 建图。
+
+> **如果硬件还没到，第 5 周继续做仿真（跑 SLAM in Gazebo）；硬件到货后立刻切真车，仿真先暂停。**
+
+## 第 5 周：硬件联通 + 真车遥控
+
+### 任务
+
+| 编号 | 任务                                              | 时间 | 验证标准                       |
+| ---- | ------------------------------------------------- | ---- | ------------------------------ |
+| W5.1 | 给 STM32 烧官方固件，OLED 能正常显示              | 1 h  | 屏幕显示 MEC + 电压             |
+| W5.2 | 串口连上位机，跑 `ros2 launch tarkbot_robot robot.launch.py` | 2 h  | `ros2 topic echo /odom` 有数据 |
+| W5.3 | 配 udev 规则绑 `/dev/tarkbot_base`                | 1 h  | 拔插不变                        |
+| W5.4 | 装 `teleop_twist_keyboard`(ROS2)，键盘遥控真车跑起来 | 1 h  | 车能动 |
+| W5.5 | 实测 odom 准不准：直走 1 m，看 `pose.pose.position.x` | 2 h  | 误差 < 5%（不准就改 STM32 端 WHEEL_DIAMETER） |
+| W5.6 | UMBmark 测试：走 4×4 m 正方形，回原点测漂移       | 3 h  | 写一份测试报告，含轨迹图        |
+| W5.7 | 雷达接 USB，跑 `sllidar_ros2`（思岚雷达），RViz2 看到点云 | 2 h  | RViz2 里能转一圈看到障碍 |
+| W5.8 | 写 `static_tf.launch`：base_link↔laser_link        | 1 h  | TF 树完整                       |
+| W5.9 | 录视频：键盘遥控真车 + RViz2 同步动                | 0.5h | 嵌入 README                     |
+
+### 周日交付
+
+- ✅ 真车能键盘遥控
+- ✅ 雷达 + IMU + 里程计三个话题都健康
+- ✅ TF 树完整，RViz2 同步显示
+- ✅ UMBmark 测试报告
+
+### 实战警告
+
+- 串口权限：`sudo usermod -aG dialout $USER` 然后**重新登录**（不是重启终端）
+- 雷达驱动：思岚 RPLidar A1 用 `rplidar_ros` 包，镭神 N10 用厂家自己的包，**别买冷门型号**
+- 第一次接电机：**先把电机轴脱开**，单独通电试，免得 PID 失控撞坏
+
+## 第 6 周：PID 调参 + 校准 + 录第一份 rosbag
+
+### 任务
+
+| 编号 | 任务                                            | 时间 | 验证标准                              |
+| ---- | ----------------------------------------------- | ---- | ------------------------------------- |
+| W6.1 | 装 `plotjuggler-ros`，订阅 /odom 实时画 4 路 RT vs TG | 2 h  | 能看见 4 路曲线 |
+| W6.2 | 改 PID 参数（Kp/Kd），观察响应                  | 4 h  | 调到无超调、稳态误差 < 5%              |
+| W6.3 | 轮径校准：直走 5 m 测实际距离修正参数            | 2 h  | 修正后 5 m 误差 < 5 cm                  |
+| W6.4 | 轴距校准：原地转 360° 测实际旋转修正参数         | 2 h  | 修正后转 5 圈累计误差 < 30°             |
+| W6.5 | 录一份 ros2 bag（mcap）：遥控车跑 1 分钟（含 odom/imu/scan） | 1 h  | bag 文件 < 100 MB |
+| W6.6 | 离线 `ros2 bag play` + RViz2 回放，验证一切正常 | 1 h  | 回放时 TF/scan/odom 一致 |
+| W6.7 | 学完 EKF 数学（卡尔曼滤波直觉版）                | 4 h  | 写一篇博客或更新《IMU 笔记》补充章节   |
+| W6.8 | 简历 v2：加上"真车 PID 调参 + UMBmark 测试"     | 1 h  | 发我或导师/学长 review                  |
+
+### 周日交付
+
+- ✅ PID 参数有理有据，能讲清调参过程
+- ✅ 一份 1 分钟干净的 rosbag（之后调试都靠它）
+- ✅ 简历 v2
+
+## 第 7 周：SLAM 建图实战 ⭐ 最有成就感的一周
+
+### 任务
+
+| 编号 | 任务                                              | 时间 | 验证标准                              |
+| ---- | ------------------------------------------------- | ---- | ------------------------------------- |
+| W7.1 | 装 `slam_toolbox` + 学官方 demo（turtlebot3 仿真） | 2 h  | 能跑 turtlebot3 在线建图 demo |
+| W7.2 | 写 `slam_toolbox.launch.py`，对接你的 odom + scan + TF | 3 h  | 启动无报错，看到 /map 输出 |
+| W7.3 | 推着小车在实验室/宿舍走一圈建图                  | 3 h  | 地图能看出环境轮廓                    |
+| W7.4 | `map_server` 保存地图为 .pgm + .yaml             | 1 h  | 地图文件能加载回来                    |
+| W7.5 | （挪到 W8）保留 slam_toolbox 在线建图为 W7 唯一主线 | - | - |
+| W7.6 | 写《技术笔记-SLAM建图实战(slam_toolbox).md》 | 4 h  | 含 slam_toolbox 在线 vs 离线建图 + 调参 |
+| W7.7 | 录 1 分钟视频：边推边看地图实时长出来            | 1 h  | 嵌入 README，发朋友圈/B站              |
+
+### 周日交付
+
+- ✅ `maps/lab.pgm` + `lab.yaml` 一份完整地图
+- ✅ 第 8 份技术笔记
+- ✅ 一段建图过程视频（**这个是简历最大的亮点之一**）
+
+### 卡点处理
+
+- slam_toolbox 出图质量差 / 地图扭曲 → 90% 是 odom 不准，回到第 6 周校准
+- TF 报错 `Could not find a connection between 'map' and 'laser_link'` → 静态 TF 没起 / `pub_odom_tf=true` 没设
+- 雷达放车上太晃 → 加减震 / 慢慢推
+
+## 第 8 周：AMCL 定位 + 真车升级
+
+### 任务
+
+| 编号 | 任务                                            | 时间 | 验证标准                             |
+| ---- | ----------------------------------------------- | ---- | ------------------------------------ |
+| W8.0 | 源码装 `cartographer_ros`（jazzy 暂无 apt 包），跟 slam_toolbox 出图对比 | 4 h | 两份地图 + 一份对比笔记（slam_toolbox/cartographer） |
+| W8.1 | 跑 `nav2_amcl`：加载第 7 周地图 + 实时定位（用 nav2_bringup 的 localization-only launch） | 3 h | RViz2 里粒子云收敛到正确位置 |
+| W8.2 | 学粒子滤波直觉（看 1~2 个 B 站讲解视频）        | 3 h  | 能讲清"运动模型 + 观测模型 + 重采样"  |
+| W8.3 | 把车搬到地图外某点，看 AMCL 能否重定位（"绑架"）| 2 h  | 能恢复（initial_pose 调对就能）       |
+| W8.4 | 装 `robot_localization`，配 `ekf_node` 融合 odom + imu | 2 h | 输出的 /odometry/filtered 比纯轮式更稳 |
+| W8.5 | 第 9 份技术笔记《技术笔记-AMCL与EKF融合(ROS2).md》 | 4 h | - |
+| W8.6 | 8 周复盘：把所有笔记整理为 GitHub Wiki 页面     | 4 h  | Wiki 有目录，能从 README 跳转         |
+| W8.7 | 简历 v3：阶段 2 全部成果加上                    | 2 h  | 发≥3 个学长/导师/在职工程师 review    |
+
+### 周日交付
+
+- ✅ 真车能在已知地图上自主定位
+- ✅ EKF 融合后的里程计明显更稳
+- ✅ 第 9 份技术笔记
+- ✅ 简历 v3
+- 🎯 **阶段 2 总结**：录 3 分钟视频"我做了一台 SLAM 小车"发 B 站，标题写好关键词
+
+
+---
+
+# 阶段 3：导航闭环 + 简历打磨 + 投实习（第 9~12 周）
+
+**主线**：完成自主导航 demo，把简历和项目页打磨到能投递，开始海投。
+
+## 第 9 周：自主导航 ⭐ 终极功能
+
+### 任务
+
+| 编号 | 任务                                              | 时间 | 验证标准                            |
+| ---- | ------------------------------------------------- | ---- | ----------------------------------- |
+| W9.1 | 学 Nav2 架构（BT / Behavior Server / Planner / Controller / Costmap） | 6 h | 能讲清 BT 在 Nav2 里的角色，对比 ROS1 move_base |
+| W9.2 | 配 `nav2_params.yaml`（global_costmap / local_costmap / planner_server / controller_server） | 6 h | `ros2 launch nav2_bringup navigation_launch.py` 启动无错 |
+| W9.3 | 选 `dwb_local_planner`（DWA 的 ROS2 版） | 2 h | 能避障 |
+| W9.4 | 在 RViz2 里点 Nav2 Goal，车自动开过去 | 4 h | 能从 A 到 B |
+| W9.5 | 加几个动态障碍（朋友走过去），看是否避开          | 2 h  | 能避开                               |
+| W9.6 | 调失败的场景（撞墙/卡住/绕远）                    | 4 h  | 列 3 个典型 bug + 修复方案到笔记     |
+| W9.7 | 录 2 分钟视频：点目标→车自主导航全过程            | 1 h  | **简历杀手锏**                      |
+
+### 周日交付
+
+- ✅ 真车能自主导航
+- ✅ 一段干净的导航演示视频
+- ✅ 至少 1 张地图 + 3 个目标点测试
+
+## 第 10 周：项目打磨 + 第一波投递
+
+> 注：本周时间被 W9 Nav2 调参吃掉前 3 天，剩 4 天集中冲简历 + 投递。
+
+### 任务
+
+| 编号 | 任务                                            | 时间 | 验证标准                          |
+| ---- | ----------------------------------------------- | ---- | --------------------------------- |
+| W10.1 | GitHub README 重写：含 GIF / 架构图 / 一键复现  | 4 h  | 别人 clone 后能跑                 |
+| W10.2 | 把 9 份技术笔记 + 学习计划合并成 Wiki           | 3 h  | 目录清晰                          |
+| W10.3 | 写一篇 5000 字的项目总结发知乎/CSDN/B 站        | 4 h  | 至少 1 篇有阅读量                 |
+| W10.4 | 简历最终版：1 页 A4，3 个核心项目              | 3 h  | 发 5 人 review，改 2 轮            |
+| W10.5 | 整理面试题库：列项目 + 基础知识 30 题，写答案   | 4 h  | 能闭眼答出 80%                     |
+| W10.6 | 投递第一批 20 家公司（boss/牛客/官网/内推）     | 3 h  | 投出去                            |
+
+### 投递策略
+
+| 公司类型                                      | 优先级 |
+| --------------------------------------------- | ------ |
+| 服务机器人（科沃斯/石头/九号/普渡/擎朗/优必选/云迹） | ⭐⭐⭐⭐⭐ 最对口 |
+| AGV/AMR（海康机器人/极智嘉/快仓/灵动）         | ⭐⭐⭐⭐  |
+| 自动驾驶低速场景（新石器/驭势/白犀牛）         | ⭐⭐⭐⭐  |
+| 大厂机器人/无人车部门（小米/字节 Robotics/美团/京东物流）| ⭐⭐⭐ 卷但锻炼 |
+| 嵌入式公司（汇川/兆易/华大/泰凌微）            | ⭐⭐⭐ 保底 |
+
+简历**别只投机器人岗**，嵌入式 / Linux 应用 / SLAM 算法工程师都投，撒网捞机会。
+
+### 周日交付
+
+- ✅ GitHub 项目页面 ≥ 5 个 star（找朋友点）
+- ✅ 简历 v4 终版
+- ✅ 第一批 20 份投递
+
+## 第 11 周：面试准备 + 第二波投递
+
+### 任务
+
+| 编号 | 任务                                            | 时间 | 验证标准                              |
+| ---- | ----------------------------------------------- | ---- | ------------------------------------- |
+| W11.1 | 录一段 5 分钟的"项目自我介绍"，自己回看      | 4 h  | 能 5 分钟讲完整套链路                 |
+| W11.2 | 刷 ROS 高频面试题（话题/服务/TF/坐标系/SLAM）   | 4 h  | 30 题闭眼答                           |
+| W11.3 | 刷嵌入式高频面试题（中断/RTOS/PID/总线）        | 4 h  | 30 题闭眼答                           |
+| W11.4 | 刷 C++ / Linux 基础（指针、内存、进程线程）     | 4 h  | 应付 80% 笔试                         |
+| W11.5 | 投递第二批 20 家                                | 2 h  |                                       |
+| W11.6 | 模拟面试：找学长/同学互相面 1~2 次              | 3 h  | 至少能完整跑一轮 30 分钟              |
+| W11.7 | 把每次面试问到的"卡住"问题写进面试题库          | 持续 |                                       |
+
+### 周日交付
+
+- ✅ 至少 3 场面试机会（电话面/视频面）
+- ✅ 面试题库 ≥ 100 题，全部有答案
+- ✅ 简历持续微调
+
+## 第 12 周：冲刺 + 持续投递 + 复盘
+
+### 任务
+
+| 编号 | 任务                                            | 时间 | 验证标准                       |
+| ---- | ----------------------------------------------- | ---- | ------------------------------ |
+| W12.1 | 第三批投递 + 跟进所有投递状态                  | 3 h  | 投递总数 ≥ 50                   |
+| W12.2 | 已 offer 选手：sign + 谈薪，没 offer：继续投    | 持续 |                                |
+| W12.3 | 加分功能：USB 摄像头 + `usb_cam`(ROS2) + YOLOv8(nano, CPU) + Nav2 联动 | 8 h | RViz2 能看到检测框；检测到障碍时通过 `/cancel_goal` 取消导航；录 30 秒视频 |
+| W12.4 | 写 3 个月学习总结博客                          | 4 h  | 发知乎/B 站，收尾仪式感         |
+| W12.5 | 把所有更新 push 到 GitHub                      | 1 h  | 仓库 commit history 漂亮       |
+| W12.6 | 复盘：哪些花太多时间？哪些回报大？记到日志     | 2 h  | 一份反思笔记                   |
+
+### 周日交付
+
+- ✅ 至少 1 个面试通过（或多个面试在跑）
+- ✅ 第 10 份技术笔记 + 加分功能
+- 🎯 **完结**：3 个月时间，从"看完源码"到"能投实习"，一份完整作品到手
+
+
+---
+
+# 附录 A：每周自查清单（周日 30 分钟过一遍）
+
+打勾才能进入下一周：
+
+- [ ] 这周所有任务做完了吗？没做完的记到下周首要事项
+- [ ] GitHub 这周有提交吗？至少 3 次 commit
+- [ ] 笔记 / 博客这周更新了吗？
+- [ ] 简历两周更新一次了吗？
+- [ ] 有没有学到一个能在面试讲的新点？写进"面试题库"
+- [ ] 有没有连续 4 小时卡某个 bug 还没问人？立刻问
+
+# 附录 B：投实习时的"项目讲法"模板
+
+面试官问"介绍下你的项目"，**不要从"我用了 ROS"开始讲，要从问题开始**：
+
+```
+我做了一台麦克纳姆轮全向移动机器人，从底层固件到上层 ROS 完整打通。
+
+→ 底层：STM32F407 + FreeRTOS，6 个任务并发，主控制循环 50Hz，
+        实现了 4 路独立 PID 速度闭环、6 种车型可配置的运动学解算、
+        Mahony 互补滤波算 IMU 四元数。
+
+→ 通信：自定义 X-Protocol 二进制协议，支持 UART / CAN 双通道，
+        校验和保证可靠性，丢包率实测 < 0.1%。
+
+→ 上层：ROS1 节点用 Boost.Asio 双线程模型，
+        发布 /odom（带动态协方差） + /imu，订阅 /cmd_vel，
+        广播 odom→base_footprint TF，能直接对接 SLAM/导航栈。
+
+→ 应用：跑通 slam_toolbox 建图 + Nav2 AMCL 定位 + Nav2 自主导航，
+        在 50 平米实验室里能从任意起点导航到任意目标。
+
+→ 量化：UMBmark 测试系统误差 < 3%，PID 调参后阶跃响应稳定时间 < 200ms。
+```
+
+**3 段话讲完整个项目，每段都有量化指标，每段都能展开 5 分钟深聊。**
+
+# 附录 C：必背的面试基础题（只列题目，自己写答案）
+
+## ROS2（10 题）
+
+1. ROS1 Master vs ROS2 DDS：发现机制差异，DDS 的优势？
+2. ROS2 QoS 五个核心 policy（reliability/durability/history/depth/liveliness），各自什么场景用？
+3. Lifecycle Node 五个状态（unconfigured/inactive/active/finalized + transitioning），用在哪？
+4. SingleThreadedExecutor vs MultiThreadedExecutor 区别？什么时候要用 callback group？
+5. `nav_msgs/Odometry` 协方差矩阵为什么是 6×6？
+6. 为什么 `Pose` 在 odom 系，`Twist` 在 base 系？
+7. ROS2 launch（Python）和 ROS1 launch（XML）写法区别？OpaqueFunction 什么时候用？
+8. Nav2 BT（Behavior Tree）相比 ROS1 move_base 状态机优势？
+9. 如何在多机间共享 ROS2（ROS_DOMAIN_ID + Discovery Server）？
+10. 怎么用 `ros2 bag` (mcap 格式) 调试，相比 ROS1 rosbag 优势？
+
+## 嵌入式 / RTOS（10 题）
+
+1. FreeRTOS 抢占式 vs 时间片轮转？
+2. 任务、ISR、临界区怎么协作？
+3. 优先级反转是什么？怎么解决？
+4. PID 位置式 vs 增量式区别？什么时候用增量式？
+5. 抗积分饱和的几种方法？
+6. 编码器 4 倍频是什么原理？
+7. UART/SPI/I²C/CAN 各自适用场景？
+8. STM32 中断优先级分组（NVIC_PriorityGroup_4）什么意思？
+9. DMA 工作模式有哪几种？
+10. 互斥量、信号量、事件标志组的区别？
+
+## C++ / Linux（10 题）
+
+1. `*(long*)&y` 这种类型双关在 C++ 里是 UB 吗？怎么正确做？
+2. `std::shared_ptr` 内部怎么实现引用计数？
+3. 进程和线程的区别？fork() 干嘛？
+4. 内存四区（栈/堆/数据/代码）？
+5. 虚函数表怎么工作？
+6. 写一个 RAII 包装的串口类
+7. udev 规则怎么写？为什么要写？
+8. systemd 怎么让 ROS 开机自启？
+9. `ldd` / `gdb` / `valgrind` 各自干嘛？
+10. CMake 里 `target_link_libraries` 和 `link_directories` 的区别？
+
+## 控制 / 数学（5 题）
+
+1. 卡尔曼滤波器三步是什么？协方差矩阵起什么作用？
+2. 为什么要用四元数而不是欧拉角？万向锁是什么？
+3. Mahony 滤波器和 Madgwick 滤波器区别？
+4. 麦轮 4×3 运动学矩阵怎么推导？
+5. EKF 在里程计 + IMU 融合中的具体作用？
+
+# 附录 D：避开的坑
+
+| 坑                                          | 怎么避                                                  |
+| ------------------------------------------- | ------------------------------------------------------- |
+| 卡在某个工具链问题（CUDA / WSL）超过 1 天   | 立刻换方案，不是非要那个工具                            |
+| 笔记越写越细 / 完美主义                     | 70% 就发，迭代再改                                      |
+| 只看视频不动手                              | 强制自己每周必须有代码提交                              |
+| 总想等"基础打牢再实战"                      | 实战是最好的基础课，边做边补                            |
+| 简历最后一周才写                            | 每两周更新一次，写不出来就是项目没干够                  |
+| 等"找到完美工作再投"                        | 海投是数量游戏，先有 5 个面试机会再挑                   |
+| GitHub 仓库私有                             | 第一天就开 public，逼自己写整齐                         |
+| 学了一堆 ROS2 / Isaac / 强化学习            | **第一份工作前，专精 ROS1 + SLAM + 嵌入式三件套就够**   |
+| 嫌弃自己项目不如别人 fancy                  | 你是应届生，把基础项目做扎实比花架子强 10 倍            |
+
+# 附录 E：每天的节奏建议
+
+```
+工作日（学校上课为主）：
+  早上 / 中午：30 分钟刷 ROS / 嵌入式面试题
+  晚上 1.5~2h：本周任务推进
+  睡前 10 分钟：今日 commit + 明天计划
+
+周末（重点突破）：
+  周六上午 4h：本周任务大头
+  周六下午 3h：调试 + 写笔记
+  周日上午 3h：录视频 / 写 README / 总结
+  周日下午：放松（保持节奏，别透支）
+```
+
+# 附录 F：3 个月后你应该有的"成果清单"
+
+1. ✅ GitHub 仓库：≥ 50 commits，README 含架构图 + GIF + 一键复现
+2. ✅ 10 份技术笔记：FreeRTOS / IMU / ROS / 运动学 / 6种车型 / URDF / PID / SLAM / AMCL / 项目总结
+3. ✅ 5 段视频：仿真演示 / 真车遥控 / SLAM 建图 / 导航 demo / 项目总结
+4. ✅ 至少 1 篇博客文章（知乎/CSDN/B 站）
+5. ✅ 1 份打磨过的简历，3 个核心项目讲得清
+6. ✅ 100 道面试题库，含答案
+7. ✅ 至少 50 份投递、≥ 5 个面试机会
+8. 🎯 **目标：1~2 个 offer 在手**
+
+---
+
+# 附录 G：ROS2 关键概念速查（与 ROS1 对照）
+
+| 概念 | ROS1 | ROS2 Jazzy | 备注 |
+|---|---|---|---|
+| 中间件 | TCPROS（自研） | DDS（FastDDS / CycloneDDS） | DDS 自带 QoS |
+| 节点发现 | roscore（中心化） | DDS 自动发现 | 不用 roscore，但 ROS_DOMAIN_ID 隔离 |
+| 接口编译 | catkin_make | colcon build | 工作区在 install/ 而非 devel/ |
+| 单元 | Node | Node / LifecycleNode / Component | Component 可热插 |
+| 调度 | spin / spinOnce | Executor + CallbackGroup | 多线程更显式 |
+| 参数 | param + dynamic_reconfigure | rcl param + ros2 param set | 没有 .cfg |
+| Action | actionlib | rclcpp_action | 接口几乎一致 |
+| Bag | rosbag (.bag) | ros2 bag (.mcap 默认) | mcap 跨语言 |
+| 导航栈 | move_base | Nav2 (BT-driven) | BT 让流程可视化 |
+| SLAM | gmapping/cartographer | slam_toolbox/cartographer | toolbox 是 nav2 默认 |
+
+# 附录 H：Jazzy 安装填坑清单
+
+1. **官方源**：`https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html` 严格按 Noble 分支走。
+2. **国内镜像**：清华源 `https://mirrors.tuna.tsinghua.edu.cn/ros2/ubuntu/`、中科大 `https://mirrors.ustc.edu.cn/ros2/ubuntu/`，但镜像偶尔不全，优先官方，慢就 fallback。
+3. **第一次 colcon build 常见错**：
+   - `find_package(rclcpp)` failed → 装 `ros-jazzy-rclcpp`
+   - `tf2/LinearMath/Quaternion.h not found` → jazzy 改 .hpp，include 改后缀（兼容头还在但建议改）
+   - `boost/bind.hpp` deprecation → 接受 warning，不修
+4. **Gazebo Harmonic**：`sudo apt install ros-jazzy-ros-gz` 一行装，不要装 classic。
+5. **Cartographer**：jazzy 暂无 apt 包，源码装：clone `cartographer_ros` jazzy 分支 → `colcon build --packages-up-to cartographer_ros`，可能需 abseil 依赖手装。
+6. **WSL2 跑 Gazebo**：需 WSLg（Win11 默认）或 VcXsrv，`gz sim` 启动慢可设 `GZ_PARTITION` 加速发现。
+
+---
+
+> **写在最后**
+>
+> 这个计划不是死的。每周日花 30 分钟看一下，根据上周的真实进度调下周的任务。
+>
+> 如果第 5 周车还没到，第 5~6 周继续做仿真，把 SLAM 在 Gazebo 里先跑通，硬件到了直接迁移。
+>
+> 如果某周完全做不动（考试 / 生病 / 家事），允许跳过，但**别累计跳过 2 周以上**。
+>
+> 如果某个任务比预期简单/难太多，立刻调整后续周的任务量。
+>
+> 计划是地图，不是铁轨。**你才是司机。**
+
