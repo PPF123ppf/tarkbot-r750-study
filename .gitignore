@@ -40,3 +40,7 @@ __pycache__/
 # === drawio 自动备份文件 ===
 .$*.bkp
 *.bkp
+
+# === 反向放行：项目自己的图（架构图、流程图等）===
+!docs/images/*.png
+!docs/images/*.svg
