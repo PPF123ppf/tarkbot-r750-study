@@ -44,7 +44,7 @@
 - [x] W1.2 修复并编译 `tarkbot_robot` ROS2 包（在 `~/ros2_ws`）
 - [x] W1.4 GitHub 仓库 + 笔记 push
 - [ ] W1.5 Mermaid 架构图
-- [ ] W1.6 项目阅读笔记 V1（≥1500 字）
+- [x] W1.6 项目阅读笔记 V1（≥4500 字，[查看](./项目阅读笔记-V1-STM32到ROS全链路.md)）
 - [ ] W2 Python 数学仿真（5 个脚本）
 - [ ] W3 URDF + RViz2
 - [ ] W4 Gazebo Harmonic

@@ -1,0 +1,210 @@
+<mxfile host="Electron" agent="initial">
+  <diagram name="TARKBOT R750 架构" id="arch">
+    <mxGraphModel dx="1788" dy="1035" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1" value="TARKBOT R750 全向移动机器人 — 系统架构" vertex="1">
+          <mxGeometry height="40" width="800" x="400" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_hw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;fontSize=14;fontStyle=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10" value="&amp;nbsp;物理硬件 Hardware" vertex="1">
+          <mxGeometry height="780" width="280" x="60" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_stm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;fontSize=14;fontStyle=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10" value="OpenCTR H60  (STM32F407 + FreeRTOS, 50Hz)" vertex="1">
+          <mxGeometry height="780" width="380" x="380" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_link" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce7f3;strokeColor=#db2777;fontSize=14;fontStyle=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10" value="&amp;nbsp;通信" vertex="1">
+          <mxGeometry height="780" width="180" x="800" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_ros" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1fae5;strokeColor=#059669;fontSize=14;fontStyle=1;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10" value="&amp;nbsp; &amp;nbsp;上位机 (Ubuntu 24.04 + ROS2 Jazzy)" vertex="1">
+          <mxGeometry height="780" width="480" x="1020" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hw_motor" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#92400e;fontSize=12" value="4× 减速电机&#xa;(13 线编码器)" vertex="1">
+          <mxGeometry height="60" width="200" x="100" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="hw_imu" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#92400e;fontSize=12" value="QMI8658A IMU&#xa;(6 轴加速度+陀螺仪)" vertex="1">
+          <mxGeometry height="60" width="200" x="100" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="hw_lidar" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#92400e;fontSize=12" value="RPLIDAR&#xa;(2D 雷达)" vertex="1">
+          <mxGeometry height="60" width="200" x="100" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="hw_bat" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#92400e;fontSize=12" value="12V 电池&#xa;(电压检测 ax_vin)" vertex="1">
+          <mxGeometry height="60" width="200" x="100" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="hw_oled" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#92400e;fontSize=12;fontStyle=2" value="OLED 显示屏&#xa;按键 / RGB 灯" vertex="1">
+          <mxGeometry height="60" width="200" x="100" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="stm_tasks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#1e40af;fontSize=12;fontStyle=1" value="FreeRTOS 6 任务并发&#xa;Start · Robot(50Hz主控) · Key&#xa;Light · Disp · Trivia" vertex="1">
+          <mxGeometry height="60" width="280" x="430" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="stm_kin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#1e40af;fontSize=12" value="ax_kinematics&#xa;6 种车型解算&#xa;(MEC/FWD/AKM/TWD/TNK/OMT)" vertex="1">
+          <mxGeometry height="60" width="280" x="430" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="stm_pid" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#1e40af;fontSize=12" value="ax_speed&#xa;4 路独立 PID 速度闭环" vertex="1">
+          <mxGeometry height="60" width="280" x="430" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="stm_imu_drv" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#1e40af;fontSize=12" value="ax_imu&#xa;读 QMI8658A + 零偏校准&#xa;Mahony 互补滤波(可选)" vertex="1">
+          <mxGeometry height="60" width="280" x="430" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="stm_ctl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#1e40af;fontSize=12" value="ax_control&#xa;手柄 / 蓝牙 APP / SBUS / ROS&#xa;速度指令源切换" vertex="1">
+          <mxGeometry height="60" width="280" x="430" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="stm_proto" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#1e40af;fontSize=12;fontStyle=1" value="X-Protocol 打包&#xa;0xAA 0x55 + LEN + ID + DATA + CKSUM&#xa;UART2(USB) / UART4(TTL) @ 230400" vertex="1">
+          <mxGeometry height="70" width="280" x="430" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="stm_drv" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#1e40af;fontSize=11;fontStyle=2" value="Driver 层&#xa;ax_motor · ax_encoder · ax_can&#xa;ax_eeprom · ax_oled · ax_rgb · ax_sbus" vertex="1">
+          <mxGeometry height="70" width="280" x="430" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="link_usb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#9d174d;fontSize=12;fontStyle=1" value="USB CDC&#xa;/dev/ttyACM0&#xa;230400 baud&#xa;50 Hz 双向" vertex="1">
+          <mxGeometry height="100" width="140" x="820" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_driver" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12;fontStyle=1" value="tarkbot_robot 节点&#xa;(Boost.Asio 异步串口读取)" vertex="1">
+          <mxGeometry height="60" width="280" x="1060" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_pub" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12" value="发布话题&#xa;/odom (nav_msgs/Odometry)&#xa;/imu (sensor_msgs/Imu)&#xa;/bat_vol (Float32)" vertex="1">
+          <mxGeometry height="80" width="280" x="1060" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_sub" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12" value="订阅话题&#xa;/cmd_vel (geometry_msgs/Twist)" vertex="1">
+          <mxGeometry height="50" width="280" x="1060" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_tf" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12" value="TF 广播&#xa;odom → base_footprint" vertex="1">
+          <mxGeometry height="50" width="280" x="1060" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_lidar" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12" value="sllidar_ros2&#xa;/scan (sensor_msgs/LaserScan)" vertex="1">
+          <mxGeometry height="50" width="280" x="1060" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_ekf" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12;dashed=1" value="robot_localization&#xa;ekf_node (W8 融合 odom + imu)" vertex="1">
+          <mxGeometry height="50" width="280" x="1060" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_slam" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12;dashed=1" value="slam_toolbox&#xa;(W7 在线建图 → /map)" vertex="1">
+          <mxGeometry height="50" width="280" x="1060" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_nav" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=12;dashed=1" value="Nav2&#xa;(W9 自主导航: BT/Planner/Controller/Costmap)" vertex="1">
+          <mxGeometry height="60" width="280" x="1060" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="ros_yolo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff;strokeColor=#065f46;fontSize=11;dashed=1;fontStyle=2" value="YOLOv8 + usb_cam&#xa;(W12 加分: 检测障碍 → cancel goal)" vertex="1">
+          <mxGeometry height="50" width="280" x="1060" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="e_motor_pid" edge="1" parent="1" source="hw_motor" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#92400e;fontSize=11;edgeStyle=orthogonalEdgeStyle;" target="stm_pid" value="编码器/PWM">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_imu_drv" edge="1" parent="1" source="hw_imu" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#92400e;fontSize=11;edgeStyle=orthogonalEdgeStyle;" target="stm_imu_drv" value="I²C">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="350" y="290" />
+              <mxPoint x="350" y="410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bat_drv" edge="1" parent="1" source="hw_bat" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#92400e;fontSize=11;edgeStyle=orthogonalEdgeStyle;" target="stm_drv" value="ADC">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tasks_kin" edge="1" parent="1" source="stm_tasks" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#1e40af" target="stm_kin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_kin_pid" edge="1" parent="1" source="stm_kin" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#1e40af" target="stm_pid">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ctl_kin" edge="1" parent="1" source="stm_ctl" style="endArrow=classic;html=1;exitX=0.75;exitY=0;entryX=0.75;entryY=1;strokeColor=#1e40af;fontSize=11;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="stm_kin" value="cmd_vel">
+          <mxGeometry relative="1" x="-0.001" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_proto_usb" edge="1" parent="1" source="stm_proto" style="endArrow=classic;startArrow=classic;html=1;exitX=0.999;exitY=0.878;entryX=0.5;entryY=1;strokeColor=#9d174d;fontSize=11;fontStyle=1;exitDx=0;exitDy=0;exitPerimeter=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" target="link_usb" value="50Hz 双向">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_usb_driver" edge="1" parent="1" source="link_usb" style="endArrow=classic;startArrow=classic;html=1;entryX=0;entryY=0.5;strokeColor=#9d174d;fontSize=11;edgeStyle=orthogonalEdgeStyle;" target="ros_driver" value="串口字节流">
+          <mxGeometry relative="1" x="-0.0006" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="890" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_driver_pub" edge="1" parent="1" source="ros_driver" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#065f46" target="ros_pub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_driver_tf" edge="1" parent="1" source="ros_driver" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#065f46;exitDx=0;exitDy=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" target="ros_tf">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1450" y="150" />
+              <mxPoint x="1450" y="415" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ekf_slam" edge="1" parent="1" source="ros_ekf" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#065f46;dashed=1" target="ros_slam">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_slam_nav" edge="1" parent="1" source="ros_slam" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#065f46;dashed=1" target="ros_nav">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_yolo_nav" edge="1" parent="1" source="ros_yolo" style="endArrow=classic;html=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#065f46;dashed=1;fontSize=11" target="ros_nav" value="cancel goal">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_lidar_slam" edge="1" parent="1" source="ros_lidar" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#065f46;dashed=1;edgeStyle=orthogonalEdgeStyle;" target="ros_slam">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1440" y="485" />
+              <mxPoint x="1440" y="625" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_lidar_ros_lidar" edge="1" parent="1" source="hw_lidar" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0;entryY=0.5;strokeColor=#92400e;fontSize=11;dashed=1;rounded=1;edgeStyle=orthogonalEdgeStyle" target="ros_lidar" value="USB (旁路)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="440" />
+              <mxPoint x="70" y="440" />
+              <mxPoint x="70" y="830" />
+              <mxPoint x="930" y="830" />
+              <mxPoint x="930" y="485" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_imu_tasks" edge="1" parent="1" source="stm_imu_drv" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#1e40af;dashed=1;fontSize=11;rounded=1;edgeStyle=orthogonalEdgeStyle" target="stm_tasks" value="IMU 数据">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="730" y="410" />
+              <mxPoint x="730" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_tasks_proto" edge="1" parent="1" source="stm_tasks" style="endArrow=classic;html=1;exitX=1;exitY=0.75;entryX=1;entryY=0.5;strokeColor=#1e40af;dashed=1;rounded=1;edgeStyle=orthogonalEdgeStyle;exitDx=0;exitDy=0;" target="stm_proto">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="745" y="165" />
+              <mxPoint x="745" y="595" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pub_ekf" edge="1" parent="1" source="ros_pub" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#065f46;dashed=1;fontSize=11;rounded=1;edgeStyle=orthogonalEdgeStyle" target="ros_ekf" value="odom+imu">
+          <mxGeometry relative="1" x="-0.1467" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1380" y="260" />
+              <mxPoint x="1380" y="555" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_nav_sub" edge="1" parent="1" source="ros_nav" style="endArrow=classic;html=1;exitX=0;exitY=0.5;entryX=0.5;entryY=1;strokeColor=#065f46;dashed=1;fontSize=11;rounded=1;edgeStyle=orthogonalEdgeStyle;entryDx=0;entryDy=0;" target="ros_sub" value="规划速度">
+          <mxGeometry relative="1" x="0.0566" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1040" y="700" />
+              <mxPoint x="1040" y="380" />
+              <mxPoint x="1200" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sub_driver" edge="1" parent="1" source="ros_sub" style="endArrow=classic;html=1;exitX=0;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#065f46;fontSize=11;rounded=1;edgeStyle=orthogonalEdgeStyle" target="ros_driver" value="cmd_vel">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="345" />
+              <mxPoint x="1030" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
