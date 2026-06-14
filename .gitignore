@@ -36,3 +36,7 @@ __pycache__/
 # === 但要保留：本仓库自己产出的 PNG（如果有）===
 # 用 ! 反向放行，未来加图时把路径加进来，例如：
 # !README-images/architecture.png
+
+# === drawio 自动备份文件 ===
+.$*.bkp
+*.bkp

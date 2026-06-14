@@ -4,6 +4,12 @@
 
 > 在校学生学习记录，从 STM32 固件 → ROS2 驱动 → SLAM → Nav2 自主导航全链路打通。
 
+## 系统架构
+
+![TARKBOT R750 系统架构](./docs/images/architecture.drawio.png)
+
+> 4 层泳道：物理硬件 → STM32+FreeRTOS → USB CDC 通信 → ROS2 上位机。雷达走 USB 旁路直接给上位机。源文件 [`architecture.drawio`](./docs/images/architecture.drawio) 可用 [app.diagrams.net](https://app.diagrams.net) 打开编辑。
+
 ## 硬件
 
 - **底盘**：TARKBOT R750（麦克纳姆轮 / 阿克曼 / 差速 / 履带 / 三轮全向 6 种车型可配置）
